@@ -6,9 +6,19 @@
     <description>Recent content in Categories on LiuKaHo&#39;s Blog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
+    <lastBuildDate>Sat, 02 Mar 2019 20:30:42 +0800</lastBuildDate>
     
 	<atom:link href="https://blog.liukaho.com/categories/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>PHP</title>
+      <link>https://blog.liukaho.com/categories/PHP/</link>
+      <pubDate>Sat, 02 Mar 2019 20:30:42 +0800</pubDate>
+      
+      <guid>https://blog.liukaho.com/categories/PHP/</guid>
+      <description></description>
+    </item>
     
   </channel>
 </rss>
