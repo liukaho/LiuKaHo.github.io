@@ -6,20 +6,21 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <title> | LiuKaHo&#39;s Blog</title>
-    <meta property="og:title" content=" - LiuKaHo&#39;s Blog">
+    <title>Laravel | LiuKaHo&#39;s Blog</title>
+    <meta property="og:title" content="Laravel - LiuKaHo&#39;s Blog">
     <meta property="og:type" content="article">
         
         
     <meta name="Keywords" content="">
-    <meta name="description" content="">
+    <meta name="description" content="Laravel">
         
     <meta name="author" content="">
-    <meta property="og:url" content="https://blog.liukaho.com/archives/">
+    <meta property="og:url" content="https://blog.liukaho.com/tags/Laravel/">
     <link rel="shortcut icon" href='/image/favicon.ico' type="image/x-icon">
 
     <link rel="stylesheet" href='/css/normalize.css'>
     <link rel="stylesheet" href='/css/style.css'>
+    <link rel="alternate" type="application/rss+xml+xml" href="https://blog.liukaho.com/tags/Laravel/index.xml" title="LiuKaHo's Blog" />
     <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
 
     
@@ -63,40 +64,38 @@
                     
 <div class="res-cons">
     
+    <h3 class="archive-title">
+        包含标签
+        <span class="keyword">Laravel</span>
+        的文章
+    </h3>
+    
+
+    
     <article class="post">
         <header>
-            <h1 class="post-title"></h1>
+            <h1 class="post-title">
+                <a href="https://blog.liukaho.com/posts/guzzle_out_of_memory/">Guzzle out of memory</a>
+            </h1>
         </header>
         <date class="post-meta meta-date">
-            1年1月1日
+            2019年3月2日
         </date>
         
-        
-        
         <div class="post-content">
-            <p>title: &ldquo;归档&rdquo;
-description: 码农一枚
-type: archives</p>
-
-        </div>
-
-        
-
-
-        
-
-
-        <div class="post-meta meta-tags">
-            
-            没有标签
-            
+            生产环境中有一个队列任务,业务就是实现把微信获取下来的图片上传到 CDN, 上传之前要先请求判断图片名称是否已存在,若存在则不上传.不存在则上传, 代码大概是:
+$client = new GuzzleHttp\Client(); for($i = 0; $i &lt; $n; $i++){ $request = new \GuzzleHttp\Psr7\Request(&#39;GET&#39;, &#39;url&#39;); //check image is exists or not $promise = $client -&gt;sendAsync($request) -&gt;then(function(){ // some code })-&gt;wait(); } 初步看其实没多大问题, 但当 $n 到了一个数量级( 取决于 php.……
+            <p class="readmore"><a href="https://blog.liukaho.com/posts/guzzle_out_of_memory/">阅读全文</a></p>
         </div>
     </article>
     
-    
 
     
-    
+
+
+
+
+
 </div>
 
                 </div>
@@ -165,17 +164,6 @@ type: archives</p>
     </div>
 </footer>
 
-
-    
-    <script type="text/javascript">
-        window.MathJax = {
-            tex2jax: {
-                inlineMath: [['$', '$']],
-                processEscapes: true
-                }
-            };
-    </script>
-    <script src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML' async></script>
 
 
 <a id="rocket" href="#top"></a>

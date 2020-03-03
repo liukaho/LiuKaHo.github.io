@@ -13,7 +13,7 @@
     <meta name="Keywords" content="">
     <meta name="description" content="">
     <meta property="og:url" content="https://blog.liukaho.com/">
-    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
+    <link rel="shortcut icon" href='/image/favicon.ico' type="image/x-icon">
 
     <link rel="stylesheet" href='/css/normalize.css'>
     <link rel="stylesheet" href='/css/style.css'>
@@ -63,6 +63,23 @@
                     
 <div class="res-cons">
     
+    <article class="post">
+        <header>
+            <h1 class="post-title">
+                <a href="https://blog.liukaho.com/posts/guzzle_out_of_memory/" title="Guzzle out of memory">Guzzle out of memory</a>
+            </h1>
+        </header>
+        <date class="post-meta meta-date">
+            2019年3月2日
+        </date>
+        
+        <div class="post-content">
+            生产环境中有一个队列任务,业务就是实现把微信获取下来的图片上传到 CDN, 上传之前要先请求判断图片名称是否已存在,若存在则不上传.不存在则上传, 代码大概是:
+$client = new GuzzleHttp\Client(); for($i = 0; $i &lt; $n; $i++){ $request = new \GuzzleHttp\Psr7\Request(&#39;GET&#39;, &#39;url&#39;); //check image is exists or not $promise = $client -&gt;sendAsync($request) -&gt;then(function(){ // some code })-&gt;wait(); } 初步看其实没多大问题, 但当 $n 到了一个数量级( 取决于 php.……
+        </div>
+        <p class="readmore"><a href="https://blog.liukaho.com/posts/guzzle_out_of_memory/">阅读全文</a></p>
+    </article>
+    
     
 
 
@@ -87,6 +104,10 @@
         <h3 class="widget-title">最近文章</h3>
 <ul class="widget-list">
     
+    <li>
+        <a href="https://blog.liukaho.com/posts/guzzle_out_of_memory/" title="Guzzle out of memory">Guzzle out of memory</a>
+    </li>
+    
 </ul>
     </section>
 
@@ -102,6 +123,12 @@
     <section class="widget">
         <h3 class="widget-title">标签</h3>
 <div class="tagcloud">
+    
+    <a href="https://blog.liukaho.com/tags/Laravel/">Laravel</a>
+    
+    <a href="https://blog.liukaho.com/tags/PHP/">PHP</a>
+    
+    <a href="https://blog.liukaho.com/tags/guzzle/">guzzle</a>
     
 </div>
     </section>

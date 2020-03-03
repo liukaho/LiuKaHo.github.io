@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>LiuKaHo&#39;s Blog</title>
-    <link>https://blog.liukaho.com/</link>
-    <description>Recent content on LiuKaHo&#39;s Blog</description>
+    <title>Laravel on LiuKaHo&#39;s Blog</title>
+    <link>https://blog.liukaho.com/tags/Laravel/</link>
+    <description>Recent content in Laravel on LiuKaHo&#39;s Blog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <lastBuildDate>Sat, 02 Mar 2019 20:30:42 +0800</lastBuildDate>
     
-	<atom:link href="https://blog.liukaho.com/index.xml" rel="self" type="application/rss+xml" />
+	<atom:link href="https://blog.liukaho.com/tags/Laravel/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>
@@ -19,15 +19,6 @@
       <guid>https://blog.liukaho.com/posts/guzzle_out_of_memory/</guid>
       <description>生产环境中有一个队列任务,业务就是实现把微信获取下来的图片上传到 CDN, 上传之前要先请求判断图片名称是否已存在,若存在则不上传.不存在则上传, 代码大概是:
 $client = new GuzzleHttp\Client(); for($i = 0; $i &amp;lt; $n; $i++){ $request = new \GuzzleHttp\Psr7\Request(&amp;#39;GET&amp;#39;, &amp;#39;url&amp;#39;); //check image is exists or not $promise = $client -&amp;gt;sendAsync($request) -&amp;gt;then(function(){ // some code })-&amp;gt;wait(); } 初步看其实没多大问题, 但当 $n 到了一个数量级( 取决于 php.</description>
-    </item>
-    
-    <item>
-      <title></title>
-      <link>https://blog.liukaho.com/archives/</link>
-      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
-      
-      <guid>https://blog.liukaho.com/archives/</guid>
-      <description>title: &amp;ldquo;归档&amp;rdquo; description: 码农一枚 type: archives</description>
     </item>
     
   </channel>
