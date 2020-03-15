@@ -6,20 +6,21 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <title>404 Page not found | LiuKaHo&#39;s Blog</title>
-    <meta property="og:title" content="404 Page not found - LiuKaHo&#39;s Blog">
+    <title>golang | LiuKaHo&#39;s Blog</title>
+    <meta property="og:title" content="golang - LiuKaHo&#39;s Blog">
     <meta property="og:type" content="article">
         
         
     <meta name="Keywords" content="">
-    <meta name="description" content="404 Page not found">
+    <meta name="description" content="golang">
         
     <meta name="author" content="">
-    <meta property="og:url" content="https://blog.liukaho.com/404.html">
+    <meta property="og:url" content="https://blog.liukaho.com/categories/golang/">
     <link rel="shortcut icon" href='/image/favicon.ico' type="image/x-icon">
 
     <link rel="stylesheet" href='/css/normalize.css'>
     <link rel="stylesheet" href='/css/style.css'>
+    <link rel="alternate" type="application/rss+xml+xml" href="https://blog.liukaho.com/categories/golang/index.xml" title="LiuKaHo's Blog" />
     <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
 
     
@@ -61,20 +62,47 @@
 
                 <div class="col-8" id="main">
                     
-<div class="body404">
-    <div class="info404">
-        <header id="header404" class="clearfix">
-            <div class="site-name404"><i>404</i></div>
-        </header>
-        <section>
-            <div class="title404">
-                <p>每一个平凡的日常<br />都是连续发生中的奇迹</p>
-            </div>
-            
+<div class="res-cons">
+    
+    <h3 class="archive-title">
+        分类
+        <span class="keyword">golang</span>
+        中的文章
+    </h3>
+    
 
-            <a rel="nofollow" href="https://blog.liukaho.com" class="index404">回首页看看</a>
-        </section>
-    </div>
+    
+    <article class="post">
+        <header>
+            <h1 class="post-title">
+                <a href="https://blog.liukaho.com/posts/golang_graceful_restart/">Golang graceful restart</a>
+            </h1>
+        </header>
+        <date class="post-meta meta-date">
+            2020年3月3日
+        </date>
+        
+        <div class="post-meta meta-category">
+            |
+            
+            <a href='https://blog.liukaho.com/categories/golang'>golang</a>
+            
+        </div>
+        
+        <div class="post-content">
+            平滑重启(优雅重启) 一般线上更新代码, 我们都是部署新的文件, 然后关闭旧服务, 用新的文件重启服务, 这种情况之下, 就会有一小段时间是无法提供服务的.要解决这个问题, 首先得解决两个小问题:
+ 旧服务必须处理完当前请求才能退出(优雅退出) 新服务必须正常处理请求, 服务不能中断(平滑重启)  流程图: 优雅退出 对于 golang 来说, http 服务可以直接采用 1.……
+            <p class="readmore"><a href="https://blog.liukaho.com/posts/golang_graceful_restart/">阅读全文</a></p>
+        </div>
+    </article>
+    
+
+    
+
+
+
+
+
 </div>
 
                 </div>

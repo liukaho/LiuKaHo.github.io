@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>golang on LiuKaHo&#39;s Blog</title>
+    <link>https://blog.liukaho.com/categories/golang/</link>
+    <description>Recent content in golang on LiuKaHo&#39;s Blog</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Tue, 03 Mar 2020 23:08:19 +0800</lastBuildDate>
+    
+	<atom:link href="https://blog.liukaho.com/categories/golang/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>Golang graceful restart</title>
+      <link>https://blog.liukaho.com/posts/golang_graceful_restart/</link>
+      <pubDate>Tue, 03 Mar 2020 23:08:19 +0800</pubDate>
+      
+      <guid>https://blog.liukaho.com/posts/golang_graceful_restart/</guid>
+      <description>平滑重启(优雅重启) 一般线上更新代码, 我们都是部署新的文件, 然后关闭旧服务, 用新的文件重启服务, 这种情况之下, 就会有一小段时间是无法提供服务的.要解决这个问题, 首先得解决两个小问题:
+ 旧服务必须处理完当前请求才能退出(优雅退出) 新服务必须正常处理请求, 服务不能中断(平滑重启)  流程图: 优雅退出 对于 golang 来说, http 服务可以直接采用 1.</description>
+    </item>
+    
+  </channel>
+</rss>

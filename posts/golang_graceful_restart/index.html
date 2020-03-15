@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="en-us">
+<head>
+
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Golang graceful restart | LiuKaHo&#39;s Blog</title>
+    <meta property="og:title" content="Golang graceful restart - LiuKaHo&#39;s Blog">
+    <meta property="og:type" content="article">
+        
+    <meta property="article:published_time" content='2020-03-03T23:08:19&#43;08:00'>
+        
+        
+    <meta property="article:modified_time" content='2020-03-03T23:08:19&#43;08:00'>
+        
+    <meta name="Keywords" content="">
+    <meta name="description" content="Golang graceful restart">
+        
+    <meta name="author" content="">
+    <meta property="og:url" content="https://blog.liukaho.com/posts/golang_graceful_restart/">
+    <link rel="shortcut icon" href='/image/favicon.ico' type="image/x-icon">
+
+    <link rel="stylesheet" href='/css/normalize.css'>
+    <link rel="stylesheet" href='/css/style.css'>
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+
+    
+
+
+    
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/hopscotch.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+</head>
+
+
+<body>
+    <header id="header" class="clearfix">
+    <div class="container">
+        <div class="col-group">
+            <div class="site-name ">
+                
+                    <a id="logo" href="https://blog.liukaho.com">
+                        LiuKaHo&#39;s Blog
+                    </a>
+                
+                
+            </div>
+            <div>
+                <nav id="nav-menu" class="clearfix">
+                    <a class="" href="https://blog.liukaho.com">首页</a>
+                    
+                </nav>
+            </div>
+        </div>
+    </div>
+</header>
+
+    <div id="body">
+        <div class="container">
+            <div class="col-group">
+
+                <div class="col-8" id="main">
+                    
+<div class="res-cons">
+    
+    <article class="post">
+        <header>
+            <h1 class="post-title">Golang graceful restart</h1>
+        </header>
+        <date class="post-meta meta-date">
+            2020年3月3日
+        </date>
+        
+        <div class="post-meta">
+            <span>|</span>
+            
+            <span class="meta-category"><a href='https://blog.liukaho.com/categories/golang'>golang</a></span>
+            
+        </div>
+        
+        
+        
+        <div class="post-content">
+            <h3 id="平滑重启优雅重启">平滑重启(优雅重启)</h3>
+<p>一般线上更新代码, 我们都是部署新的文件, 然后关闭旧服务, 用新的文件重启服务, 这种情况之下, 就会有一小段时间是无法提供服务的.要解决这个问题, 首先得解决两个小问题:</p>
+<ul>
+<li>旧服务必须处理完当前请求才能退出(优雅退出)</li>
+<li>新服务必须正常处理请求, 服务不能中断(平滑重启)</li>
+</ul>
+<p>流程图:
+<img src="/images/graceful_restart.jpg" alt=""></p>
+<h4 id="优雅退出">优雅退出</h4>
+<p>对于 <code>golang</code> 来说, http 服务可以直接采用 1.8.x 之后官方提供的 http.shutdown 来做到优雅退出</p>
+<p>shutdown 步骤:</p>
+<ol>
+<li>把inShutdown 标志位赋值为 1, 改操作是原子性操作</li>
+<li>关闭所有打开的 listenner</li>
+<li>然后无限等待所有的连接转为空闲连接</li>
+<li>如果传递的上下文超时了, 会抛出error</li>
+</ol>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-golang" data-lang="golang"><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">srv</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Server</span>) <span style="color:#a6e22e">Shutdown</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>) <span style="color:#66d9ef">error</span> {
+    <span style="color:#75715e">//步骤 1
+</span><span style="color:#75715e"></span>	<span style="color:#a6e22e">atomic</span>.<span style="color:#a6e22e">StoreInt32</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">srv</span>.<span style="color:#a6e22e">inShutdown</span>, <span style="color:#ae81ff">1</span>)
+
+    <span style="color:#a6e22e">srv</span>.<span style="color:#a6e22e">mu</span>.<span style="color:#a6e22e">Lock</span>()
+    <span style="color:#75715e">//步骤 2
+</span><span style="color:#75715e"></span>	<span style="color:#a6e22e">lnerr</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">srv</span>.<span style="color:#a6e22e">closeListenersLocked</span>()
+    <span style="color:#a6e22e">srv</span>.<span style="color:#a6e22e">closeDoneChanLocked</span>()
+    <span style="color:#75715e">//如果有注册 shutdown 回调 (RegisterShotdown), 将在这里执行
+</span><span style="color:#75715e"></span>	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">f</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">srv</span>.<span style="color:#a6e22e">onShutdown</span> {
+		<span style="color:#66d9ef">go</span> <span style="color:#a6e22e">f</span>()
+	}
+	<span style="color:#a6e22e">srv</span>.<span style="color:#a6e22e">mu</span>.<span style="color:#a6e22e">Unlock</span>()
+
+	<span style="color:#a6e22e">ticker</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">NewTicker</span>(<span style="color:#a6e22e">shutdownPollInterval</span>)
+	<span style="color:#66d9ef">defer</span> <span style="color:#a6e22e">ticker</span>.<span style="color:#a6e22e">Stop</span>()
+	<span style="color:#66d9ef">for</span> {
+        <span style="color:#75715e">//步骤 3
+</span><span style="color:#75715e"></span>		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">srv</span>.<span style="color:#a6e22e">closeIdleConns</span>() {
+			<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">lnerr</span>
+		}
+		<span style="color:#66d9ef">select</span> {
+		<span style="color:#66d9ef">case</span> <span style="color:#f92672">&lt;-</span><span style="color:#a6e22e">ctx</span>.<span style="color:#a6e22e">Done</span>():  <span style="color:#75715e">//步骤 4
+</span><span style="color:#75715e"></span>			<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">ctx</span>.<span style="color:#a6e22e">Err</span>()
+		<span style="color:#66d9ef">case</span> <span style="color:#f92672">&lt;-</span><span style="color:#a6e22e">ticker</span>.<span style="color:#a6e22e">C</span>:
+		}
+	}
+}
+</code></pre></div><h4 id="平滑重启">平滑重启</h4>
+<ol>
+<li>我们直接用 <code>exec.Command</code> 来启动一个新的进程, 并且该进程需要继承旧进程的 fd</li>
+</ol>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-golang" data-lang="golang"><span style="color:#a6e22e">tl</span>, <span style="color:#a6e22e">_</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">listener</span>.(<span style="color:#f92672">*</span><span style="color:#a6e22e">net</span>.<span style="color:#a6e22e">TCPListener</span>)
+<span style="color:#a6e22e">currentFD</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">tl</span>.<span style="color:#a6e22e">File</span>()
+<span style="color:#75715e">//graceful 只是一个标识, 告诉新进程这是平滑重启
+</span><span style="color:#75715e"></span><span style="color:#a6e22e">cmd</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">exec</span>.<span style="color:#a6e22e">Command</span>(<span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Args</span>[<span style="color:#ae81ff">0</span>], <span style="color:#e6db74">&#34;graceful&#34;</span>)
+<span style="color:#75715e">//继承旧进程 fd
+</span><span style="color:#75715e"></span><span style="color:#a6e22e">cmd</span>.<span style="color:#a6e22e">ExtraFiles</span>, <span style="color:#a6e22e">cmd</span>.<span style="color:#a6e22e">Stdout</span>, <span style="color:#a6e22e">cmd</span>.<span style="color:#a6e22e">Stderr</span> = []<span style="color:#f92672">*</span><span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">File</span>{<span style="color:#a6e22e">currentFD</span>}, <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Stdout</span>, <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Stderr</span>
+<span style="color:#a6e22e">cmd</span>.<span style="color:#a6e22e">Start</span>()
+
+<span style="color:#75715e">//新进程
+</span><span style="color:#75715e"></span><span style="color:#a6e22e">f</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">NewFile</span>(<span style="color:#ae81ff">3</span>, <span style="color:#e6db74">&#34;&#34;</span>) <span style="color:#75715e">//0,1,2是标准输入, 输出, 错误输出, 所以传进来的 fd 从 3 开始
+</span><span style="color:#75715e"></span><span style="color:#a6e22e">listener</span>, <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">net</span>.<span style="color:#a6e22e">FileListener</span>(<span style="color:#a6e22e">f</span>)
+</code></pre></div><ol start="2">
+<li>新进程通知旧进程优雅退出</li>
+</ol>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-golang" data-lang="golang"><span style="color:#75715e">//获取旧进程 pid
+</span><span style="color:#75715e"></span><span style="color:#a6e22e">pid</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">getPid</span>()
+<span style="color:#a6e22e">process</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">FindProcess</span>(<span style="color:#a6e22e">pid</span>)
+<span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">process</span>.<span style="color:#a6e22e">Signal</span>(<span style="color:#a6e22e">syscall</span>.<span style="color:#a6e22e">SIGKILL</span>) <span style="color:#75715e">//发送退出信号
+</span></code></pre></div><ol start="3">
+<li>旧进程接收退出信号并开始优雅退出</li>
+</ol>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-golang" data-lang="golang"><span style="color:#75715e">//我设置了 20 秒的过期时间
+</span><span style="color:#75715e"></span><span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">_</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">WithTimeout</span>(<span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Background</span>(), <span style="color:#ae81ff">20</span><span style="color:#f92672">*</span><span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Second</span>)
+<span style="color:#a6e22e">server</span>.<span style="color:#a6e22e">Shutdown</span>(<span style="color:#a6e22e">ctx</span>)
+</code></pre></div><p>完整代码:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-golang" data-lang="golang"><span style="color:#75715e">//平滑重启时执行
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">gracefulStart</span>() {
+    <span style="color:#a6e22e">pid</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">getPid</span>()
+    <span style="color:#a6e22e">process</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">FindProcess</span>(<span style="color:#a6e22e">pid</span>)
+    <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">process</span>.<span style="color:#a6e22e">Signal</span>(<span style="color:#a6e22e">syscall</span>.<span style="color:#a6e22e">SIGKILL</span>) <span style="color:#75715e">//发送退出信号
+</span><span style="color:#75715e"></span>
+	<span style="color:#a6e22e">f</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">NewFile</span>(<span style="color:#ae81ff">3</span>, <span style="color:#e6db74">&#34;&#34;</span>)
+	<span style="color:#a6e22e">listener</span>, <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">net</span>.<span style="color:#a6e22e">FileListener</span>(<span style="color:#a6e22e">f</span>)
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+		<span style="color:#a6e22e">exit</span>(<span style="color:#a6e22e">err</span>)
+    }
+    
+    <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">cleanPid</span>()
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+		<span style="color:#a6e22e">exit</span>(<span style="color:#a6e22e">err</span>)
+	}
+
+	<span style="color:#a6e22e">run</span>()
+}
+
+<span style="color:#75715e">//普通启动时执行
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">run</span>() {
+    <span style="color:#75715e">//写入 pid
+</span><span style="color:#75715e"></span>	<span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">setupPid</span>()
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+		<span style="color:#a6e22e">exit</span>(<span style="color:#a6e22e">err</span>)
+    }
+    
+	<span style="color:#a6e22e">server</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">Server</span>{
+		<span style="color:#a6e22e">Handler</span>:     <span style="color:#a6e22e">initHttpHandler</span>(),
+		<span style="color:#a6e22e">ReadTimeout</span>: <span style="color:#ae81ff">6</span> <span style="color:#f92672">*</span> <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Second</span>,
+	}
+	<span style="color:#66d9ef">go</span> <span style="color:#66d9ef">func</span>() {
+		<span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">server</span>.<span style="color:#a6e22e">Serve</span>(<span style="color:#a6e22e">listener</span>)
+		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+			<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#a6e22e">err</span>)
+		}
+	}()
+
+	<span style="color:#66d9ef">func</span>() {
+		<span style="color:#a6e22e">ch</span> <span style="color:#f92672">:=</span> make(<span style="color:#66d9ef">chan</span> <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Signal</span>, <span style="color:#ae81ff">1</span>)
+		<span style="color:#a6e22e">signal</span>.<span style="color:#a6e22e">Notify</span>(<span style="color:#a6e22e">ch</span>, <span style="color:#a6e22e">syscall</span>.<span style="color:#a6e22e">SIGUSR2</span>, <span style="color:#a6e22e">syscall</span>.<span style="color:#a6e22e">SIGKILL</span>)
+		<span style="color:#66d9ef">for</span> { <span style="color:#75715e">//阻塞主进程， 不停的监听系统信号
+</span><span style="color:#75715e"></span>			<span style="color:#a6e22e">sig</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&lt;-</span><span style="color:#a6e22e">ch</span>
+			<span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">_</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">WithTimeout</span>(<span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Background</span>(), <span style="color:#ae81ff">20</span><span style="color:#f92672">*</span><span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Second</span>)
+			<span style="color:#66d9ef">switch</span> <span style="color:#a6e22e">sig</span> {
+			<span style="color:#66d9ef">case</span> <span style="color:#a6e22e">syscall</span>.<span style="color:#a6e22e">SIGKILL</span>:
+				<span style="color:#a6e22e">server</span>.<span style="color:#a6e22e">Shutdown</span>(<span style="color:#a6e22e">ctx</span>)
+				<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;shutdown at &#34;</span>, <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Now</span>())
+			<span style="color:#66d9ef">case</span> <span style="color:#a6e22e">syscall</span>.<span style="color:#a6e22e">SIGUSR2</span>:
+				println(<span style="color:#e6db74">&#34;signal cause reloading&#34;</span>)
+				<span style="color:#a6e22e">signal</span>.<span style="color:#a6e22e">Stop</span>(<span style="color:#a6e22e">ch</span>)
+				{ <span style="color:#75715e">//fork new child process
+</span><span style="color:#75715e"></span>					<span style="color:#a6e22e">tl</span>, <span style="color:#a6e22e">ok</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">listener</span>.(<span style="color:#f92672">*</span><span style="color:#a6e22e">net</span>.<span style="color:#a6e22e">TCPListener</span>)
+					<span style="color:#66d9ef">if</span> !<span style="color:#a6e22e">ok</span> {
+						<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;listener is not tcp listener&#34;</span>)
+						<span style="color:#66d9ef">return</span>
+					}
+					<span style="color:#a6e22e">currentFD</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">tl</span>.<span style="color:#a6e22e">File</span>()
+					<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+						<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;acquiring listener file failed&#34;</span>)
+						<span style="color:#66d9ef">return</span>
+					}
+					<span style="color:#a6e22e">cmd</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">exec</span>.<span style="color:#a6e22e">Command</span>(<span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Args</span>[<span style="color:#ae81ff">0</span>], <span style="color:#e6db74">&#34;graceful&#34;</span>)
+					<span style="color:#a6e22e">cmd</span>.<span style="color:#a6e22e">ExtraFiles</span>, <span style="color:#a6e22e">cmd</span>.<span style="color:#a6e22e">Stdout</span>, <span style="color:#a6e22e">cmd</span>.<span style="color:#a6e22e">Stderr</span> = []<span style="color:#f92672">*</span><span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">File</span>{<span style="color:#a6e22e">currentFD</span>}, <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Stdout</span>, <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Stderr</span>
+					<span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">cmd</span>.<span style="color:#a6e22e">Start</span>()
+
+					<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+						<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;cmd.Start fail: &#34;</span>, <span style="color:#a6e22e">err</span>)
+						<span style="color:#66d9ef">return</span>
+					}
+					<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;forked new pid : &#34;</span>, <span style="color:#a6e22e">cmd</span>.<span style="color:#a6e22e">Process</span>.<span style="color:#a6e22e">Pid</span>)
+				}
+
+				<span style="color:#a6e22e">server</span>.<span style="color:#a6e22e">Shutdown</span>(<span style="color:#a6e22e">ctx</span>)
+				<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;shutdown at &#34;</span>, <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Now</span>())
+				<span style="color:#66d9ef">return</span>
+			}
+		}
+	}()
+}
+</code></pre></div>
+        </div>
+
+        
+
+
+        
+
+
+        <div class="post-meta meta-tags">
+            
+            <ul class="clearfix">
+                
+                <li><a href='https://blog.liukaho.com/tags/golang'>golang</a></li>
+                
+            </ul>
+            
+        </div>
+    </article>
+    
+    
+
+    
+    
+</div>
+
+                </div>
+
+                <div id="secondary">
+    <section class="widget">
+        <form id="search" action='//www.google.com/search' method="get" accept-charset="utf-8" target="_blank" _lpchecked="1">
+      
+      <input type="text" name="q" maxlength="20" placeholder="Search">
+      <input type="hidden" name="sitesearch" value="https://blog.liukaho.com">
+      <button type="submit" class="submit icon-search"></button>
+</form>
+    </section>
+    
+    <section class="widget">
+        <h3 class="widget-title">最近文章</h3>
+<ul class="widget-list">
+    
+    <li>
+        <a href="https://blog.liukaho.com/posts/golang_graceful_restart/" title="Golang graceful restart">Golang graceful restart</a>
+    </li>
+    
+    <li>
+        <a href="https://blog.liukaho.com/posts/guzzle_out_of_memory/" title="Guzzle out of memory">Guzzle out of memory</a>
+    </li>
+    
+</ul>
+    </section>
+
+    
+
+    <section class="widget">
+        <h3 class="widget-title">分类</h3>
+<ul class="widget-list">
+    
+    <li><a href="https://blog.liukaho.com/categories/PHP/">PHP (1)</a></li>
+    
+    <li><a href="https://blog.liukaho.com/categories/golang/">golang (1)</a></li>
+    
+</ul>
+    </section>
+
+    <section class="widget">
+        <h3 class="widget-title">标签</h3>
+<div class="tagcloud">
+    
+    <a href="https://blog.liukaho.com/tags/Laravel/">Laravel</a>
+    
+    <a href="https://blog.liukaho.com/tags/PHP/">PHP</a>
+    
+    <a href="https://blog.liukaho.com/tags/golang/">golang</a>
+    
+    <a href="https://blog.liukaho.com/tags/guzzle/">guzzle</a>
+    
+</div>
+    </section>
+
+    
+
+    <section class="widget">
+        <h3 class="widget-title">其它</h3>
+        <ul class="widget-list">
+            <li><a href="https://blog.liukaho.com/index.xml">文章 RSS</a></li>
+        </ul>
+    </section>
+</div>
+            </div>
+        </div>
+    </div>
+    <footer id="footer">
+    <div class="container">
+        &copy; 2020 <a href="https://blog.liukaho.com">LiuKaHo&#39;s Blog By </a>.
+        Powered by <a rel="nofollow noreferer noopener" href="https://gohugo.io" target="_blank">Hugo</a>.
+        <a href="https://www.flysnow.org/" target="_blank">Theme</a> based on <a href="https://github.com/flysnow-org/maupassant-hugo" target="_blank">maupassant</a>.
+        
+    </div>
+</footer>
+
+
+    
+    <script type="text/javascript">
+        window.MathJax = {
+            tex2jax: {
+                inlineMath: [['$', '$']],
+                processEscapes: true
+                }
+            };
+    </script>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML' async></script>
+
+
+<a id="rocket" href="#top"></a>
+<script type="text/javascript" src='/js/totop.js?v=0.0.0' async=""></script>
+
+
+
+
+
+
+</body>
+
+</html>
